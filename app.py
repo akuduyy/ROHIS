@@ -120,7 +120,7 @@ def init_connection():
         user=st.secrets["mysql"]["username"],
         password=st.secrets["mysql"]["password"],
         database=st.secrets["mysql"]["database"],
-        port=st.secrets["mysql"]["port"]
+        port=st.secrets["mysql"]["port"],
         use_pure=True
     )
 
