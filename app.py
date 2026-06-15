@@ -131,6 +131,8 @@ try:
 except Exception as e:
     st.error(str(e))
     st.stop()
+
+cursor = conn.cursor(dictionary=True)
 # ---------------------------------------------------------
 # 3. MANAJEMEN SESSION STATE & LOGGING SYSTEM
 # ---------------------------------------------------------
