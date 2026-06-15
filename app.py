@@ -117,17 +117,20 @@ st.markdown("""
 def init_connection():
     return mysql.connector.connect(
         host=st.secrets["mysql"]["host"],
+        port=st.secrets["mysql"]["port"],
         user=st.secrets["mysql"]["username"],
         password=st.secrets["mysql"]["password"],
         database=st.secrets["mysql"]["database"],
-        port=st.secrets["mysql"]["port"],
-        use_pure=True
+        ssl_disabled=False
     )
 
 
-conn = init_connection()
-cursor = conn.connector.cursor(dictionary=True) if hasattr(conn, 'connector') else conn.cursor(dictionary=True)
-
+try:
+    conn = init_connection()
+    st.success("Database connected")
+except Exception as e:
+    st.error(str(e))
+    st.stop()
 # ---------------------------------------------------------
 # 3. MANAJEMEN SESSION STATE & LOGGING SYSTEM
 # ---------------------------------------------------------
