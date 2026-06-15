@@ -122,7 +122,6 @@ def init_connection():
         database=st.secrets["mysql"]["database"],
         port=st.secrets["mysql"]["port"]
     )
-    )
 
 conn = init_connection()
 cursor = conn.connector.cursor(dictionary=True) if hasattr(conn, 'connector') else conn.cursor(dictionary=True)
