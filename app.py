@@ -1,6 +1,5 @@
 import streamlit as st
-import pymysql
-import pymysql.cursors
+import mysql.connector
 import pandas as pd
 import time 
 import datetime 
@@ -39,29 +38,35 @@ st.markdown("""
 # 2. KONEKSI DATABASE AMAN (Anti-Lost Connection)
 # ---------------------------------------------------------
 def get_db_cursor():
-    def create_connection():
-        return pymysql.connect(
+    if 'db_conn' not in st.session_state or st.session_state['db_conn'] is None:
+        st.session_state['db_conn'] = mysql.connector.connect(
             host=st.secrets["mysql"]["host"],
             port=int(st.secrets["mysql"]["port"]),
             user=st.secrets["mysql"]["username"],
             password=st.secrets["mysql"]["password"],
             database=st.secrets["mysql"]["database"],
             autocommit=True,
-            cursorclass=pymysql.cursors.DictCursor
+            use_pure=True
         )
-
-    if 'db_conn' not in st.session_state or st.session_state['db_conn'] is None:
-        st.session_state['db_conn'] = create_connection()
     
     conn = st.session_state['db_conn']
     
     try:
-        conn.ping(reconnect=True)
+        conn.ping(reconnect=True, attempts=3, delay=2)
     except Exception:
-        st.session_state['db_conn'] = create_connection()
+        st.session_state['db_conn'] = mysql.connector.connect(
+            host=st.secrets["mysql"]["host"],
+            port=int(st.secrets["mysql"]["port"]),
+            user=st.secrets["mysql"]["username"],
+            password=st.secrets["mysql"]["password"],
+            database=st.secrets["mysql"]["database"],
+            autocommit=True,
+            use_pure=True
+        )
         conn = st.session_state['db_conn']
         
-    return conn, conn.cursor()
+    return conn, conn.cursor(dictionary=True)
+
 # ---------------------------------------------------------
 # 3. MANAJEMEN SESSION STATE & LOGGING SYSTEM
 # ---------------------------------------------------------
