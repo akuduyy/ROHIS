@@ -53,7 +53,11 @@ def get_db_cursor():
         conn = init_connection()
         if not conn.is_connected():
             conn.reconnect(attempts=3, delay=2)
-        return conn, conn.cursor(dictionary=True)
+            
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SET SESSION sql_mode = ''")
+        
+        return conn, cursor
     except Exception as e:
         st.error(f"Gagal terhubung ke Database TiDB: {e}")
         st.stop()
