@@ -1,4 +1,5 @@
-streamlit
-pandas
-mysql-connector-python
-fpdf2
+streamlit==1.58.0
+mysql-connector-python==9.7.0
+pandas==3.0.3
+fpdf2==2.8.7
+openpyxl==3.1.2
