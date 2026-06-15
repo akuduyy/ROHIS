@@ -45,7 +45,8 @@ def init_connection():
         user=st.secrets["mysql"]["username"],
         password=st.secrets["mysql"]["password"],
         database=st.secrets["mysql"]["database"],
-        autocommit=True
+        autocommit=True,
+        use_pure=True
     )
 
 def get_db_cursor():
