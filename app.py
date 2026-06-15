@@ -273,7 +273,7 @@ def halaman_data_siswa():
     if data_siswa:
         df_siswa = pd.DataFrame(data_siswa)
         df_siswa.columns = ['ID Siswa', 'Nama Lengkap', 'Kelas']
-        st.dataframe(df_siswa, use_container_width=True, hide_index=True)
+        st.dataframe(df_siswa, width="stretch", hide_index=True)
     else:
         st.info("Belum ada data anggota yang terdaftar di database.")
         df_siswa = pd.DataFrame() 
@@ -642,7 +642,7 @@ def halaman_hasil_spk():
                         div = list_divisi[i + j]
                         with cols[j]:
                             btn_type = "primary" if st.session_state['filter_divisi'] == div else "secondary"
-                            if st.button(div, type=btn_type, use_container_width=True, key=f"btn_filter_{i+j}"):
+                            if st.button(div, type=btn_type, width="stretch", key=f"btn_filter_{i+j}"):
                                 st.session_state['filter_divisi'] = div
                                 st.rerun()
                         
@@ -682,7 +682,7 @@ def halaman_hasil_spk():
                         data=excel_bytes,
                         file_name=f"Laporan_Rohis_{datetime.date.today()}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True,
+                        width="stretch",
                         type="primary"
                     )
 
@@ -737,14 +737,14 @@ def halaman_hasil_spk():
                             data=pdf_bytes,
                             file_name=f"Laporan_Rohis_{datetime.date.today()}.pdf",
                             mime="application/pdf",
-                            use_container_width=True,
+                            width="stretch",
                             type="primary"
                         )
                 except ImportError:
                     with col_pdf:
                         st.error("⚠️ Install fpdf2 (pip install fpdf2)")
 
-                st.dataframe(df_klasemen, hide_index=True, use_container_width=True)
+                st.dataframe(df_klasemen, hide_index=True, width="stretch")
             else:
                 st.warning(f"Belum ada data siswa yang direkomendasikan untuk divisi: {st.session_state['filter_divisi']}")
 
@@ -842,11 +842,11 @@ def halaman_hasil_spk():
 
                     with st.expander("Lihat Detail Matriks & NCF/NSF"):
                         st.subheader("1. Matriks Gap")
-                        st.dataframe(df_gap.style.map(color_gap, subset=kriteria_list), hide_index=True, use_container_width=True)
+                        st.dataframe(df_gap.style.map(color_gap, subset=kriteria_list), hide_index=True, width="stretch")
                         df_hasil = pd.DataFrame(hasil_perhitungan)
                         df_hasil = df_hasil.sort_values(by="Skor Akhir", ascending=False).reset_index(drop=True)
                         st.subheader("2. Hasil NCF, NSF, dan Skor Akhir")
-                        st.dataframe(df_hasil, hide_index=True, use_container_width=True)
+                        st.dataframe(df_hasil, hide_index=True, width="stretch")
 
                     if st.button("Simpan Rekomendasi ke Klasemen", type="primary"):
                         try:
@@ -889,11 +889,11 @@ if not st.session_state['logged_in']:
     
     with col_kanan:
         if st.session_state['menu_aktif'] != "Login Akses":
-            if st.button("Login 👤", type="primary", use_container_width=True):
+            if st.button("Login 👤", type="primary", width="stretch"):
                 st.session_state['menu_aktif'] = "Login Akses"
                 st.rerun()
         else:
-            if st.button("Kembali", use_container_width=True):
+            if st.button("Kembali", width="stretch"):
                 st.session_state['menu_aktif'] = "🏠 Dashboard"
                 st.rerun()
 
@@ -926,7 +926,7 @@ else:
     col_kiri, col_kanan = st.columns([8, 1]) 
             
     with col_kanan:
-        if st.button("Keluar 🚪", use_container_width=True):
+        if st.button("Keluar 🚪", width="stretch"):
             dialog_konfirmasi_logout()
 
     with st.sidebar:
