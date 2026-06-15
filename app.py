@@ -688,16 +688,18 @@ def halaman_hasil_spk():
 
                 try:
                     from fpdf import FPDF
-                    import tempfile
-                    import os
+                    from fpdf.enums import XPos, YPos  # Import parameter baru fpdf2
 
                     class PDF(FPDF):
                         def header(self):
-                            self.set_font('Arial', 'B', 12)
-                            self.cell(0, 10, 'Laporan Hasil Penempatan Divisi ROHIS SMPN 87 Jakarta', 0, 1, 'C')
+                            # Ganti Arial jadi Helvetica
+                            self.set_font('Helvetica', 'B', 12)
+                            # Ganti ln=1 jadi new_x dan new_y
+                            self.cell(0, 10, 'Laporan Hasil Penempatan Divisi ROHIS SMPN 87 Jakarta', border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
+                            
                             if st.session_state['filter_divisi'] != "Semua Divisi":
-                                self.set_font('Arial', 'I', 10)
-                                self.cell(0, 8, f'Kategori: {st.session_state["filter_divisi"]}', 0, 1, 'C')
+                                self.set_font('Helvetica', 'I', 10)
+                                self.cell(0, 8, f'Kategori: {st.session_state["filter_divisi"]}', border=0, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
                             self.ln(5)
 
                     pdf = PDF()
@@ -706,30 +708,28 @@ def halaman_hasil_spk():
                     headers = ["Rank", "Nama Siswa", "Kelas", "Nilai", "Tk. Kecocokan", "Rekomendasi Divisi"]
                     col_widths = [12, 45, 12, 15, 23, 83] 
                     
-                    pdf.set_font("Arial", 'B', 9)
+                    pdf.set_font("Helvetica", 'B', 9)
                     for i, header in enumerate(headers):
-                        pdf.cell(col_widths[i], 10, header, 1, 0, 'C')
+                        # Ganti ln=0 jadi parameter baru
+                        pdf.cell(col_widths[i], 10, header, border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C')
                     pdf.ln()
 
-                    pdf.set_font("Arial", size=8)
+                    pdf.set_font("Helvetica", size=8)
                     for index, row in df_klasemen.iterrows():
-                        pdf.cell(col_widths[0], 8, str(row['Rank']), 1, 0, 'C')
-                        pdf.cell(col_widths[1], 8, str(row['Nama Siswa'])[:22], 1, 0, 'L')
-                        pdf.cell(col_widths[2], 8, str(row['Kelas']), 1, 0, 'C')
+                        pdf.cell(col_widths[0], 8, str(row['Rank']), border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C')
+                        pdf.cell(col_widths[1], 8, str(row['Nama Siswa'])[:22], border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='L')
+                        pdf.cell(col_widths[2], 8, str(row['Kelas']), border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C')
                         
-                        pdf.cell(col_widths[3], 8, str(row['Nilai']), 1, 0, 'C')
-                        pdf.cell(col_widths[4], 8, str(row['Tingkat Kecocokan']), 1, 0, 'C')
+                        pdf.cell(col_widths[3], 8, str(row['Nilai']), border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C')
+                        pdf.cell(col_widths[4], 8, str(row['Tingkat Kecocokan']), border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='C')
                         
                         rek = str(row['Rekomendasi Divisi'])
                         if len(rek) > 48: rek = rek[:45] + "..."
-                        pdf.cell(col_widths[5], 8, rek, 1, 0, 'L')
+                        pdf.cell(col_widths[5], 8, rek, border=1, new_x=XPos.RIGHT, new_y=YPos.TOP, align='L')
                         pdf.ln()
 
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-                        pdf.output(tmp.name)
-                        with open(tmp.name, "rb") as f:
-                            pdf_bytes = f.read()
-                    os.remove(tmp.name)
+                    # SOLUSI SEGMENTATION FAULT: Output langsung ke bytes (RAM), HAPUS tempfile
+                    pdf_bytes = bytes(pdf.output())
 
                     with col_pdf:
                         st.download_button(
@@ -737,12 +737,12 @@ def halaman_hasil_spk():
                             data=pdf_bytes,
                             file_name=f"Laporan_Rohis_{datetime.date.today()}.pdf",
                             mime="application/pdf",
-                            width="stretch",
+                            width="stretch", 
                             type="primary"
                         )
-                except ImportError:
+                except Exception as e:
                     with col_pdf:
-                        st.error("⚠️ Install fpdf2 (pip install fpdf2)")
+                        st.error(f"⚠️ Gagal mencetak PDF: {e}")
 
                 st.dataframe(df_klasemen, hide_index=True, width="stretch")
             else:
