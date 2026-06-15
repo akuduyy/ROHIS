@@ -3,162 +3,83 @@ import mysql.connector
 import pandas as pd
 import time 
 import datetime 
+import io
+import tempfile
+import os
 
 # ---------------------------------------------------------
-# 1. KONFIGURASI HALAMAN UTAMA & SUNTIKAN TEMA WARNA (ROHIS THEME)
+# 1. KONFIGURASI HALAMAN UTAMA & SUNTIKAN TEMA WARNA
 # ---------------------------------------------------------
 st.set_page_config(page_title="ROHIS-MATCH", page_icon="🕌", layout="wide")
 
-# Suntikan CSS Kustom untuk Merubah Warna Website Secara Global (Mix Hijau & Kuning)
 st.markdown("""
     <style>
-        /* 1. Latar Belakang Utama & Sidebar (Deep Islamic Dark Green) */
-        [data-testid="stAppViewContainer"] {
-            background-color: #091310 !important;
-        }
-        [data-testid="stSidebar"] {
-            background-color: #050a08 !important;
-            border-right: 1px solid #12241f;
-        }
-        
-        /* 2. Warna Teks Global */
-        html, body, [class*="css"] {
-            color: #f1f5f9 !important;
-        }
-        
-        /* 3. Tombol Utama / Primary Buttons (Hijau Emerald & Kuning Emas) */
-        button[kind="primary"] {
-            background-color: #10b981 !important; /* Hijau Emerald */
-            color: white !important;
-            border: 1px solid #059669 !important;
-            border-radius: 8px !important;
-            font-weight: bold !important;
-            transition: all 0.3s ease !important;
-            min-height: 60px !important; /* <-- Menyamaratakan tinggi tombol */
-        }
-        button[kind="primary"]:hover {
-            background-color: #eab308 !important; /* Berubah menjadi Kuning Emas saat di-hover */
-            color: #050a08 !important;
-            border: 1px solid #ca8a04 !important;
-            box-shadow: 0px 0px 10px rgba(234, 179, 8, 0.5) !important;
-        }
-        
-        /* 4. Tombol Biasa / Secondary Buttons */
-        button[kind="secondary"] {
-            background-color: #11221c !important;
-            color: #10b981 !important;
-            border: 1px solid #1b382e !important;
-            border-radius: 8px !important;
-            min-height: 60px !important; /* <-- Menyamaratakan tinggi tombol */
-        }
-        button[kind="secondary"]:hover {
-            background-color: #1b382e !important;
-            color: #eab308 !important;
-            border: 1px solid #eab308 !important;
-        }
-
-        /* 5. Kotak Pilihan & Form Input (Dropdown, Text Input, Selectbox) */
-        div[data-baseweb="input"], div[data-baseweb="select"], .stSelectbox div {
-            background-color: #0d1f19 !important;
-            border: 1px solid #1b382e !important;
-            color: white !important;
-        }
-        div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within {
-            border-color: #10b981 !important;
-        }
-        
-        /* 6. Statistik Angka Ringkasan / Dashboard Metrics (Kuning Emas) */
-        div[data-testid="stMetricValue"] {
-            color: #eab308 !important; 
-            font-weight: bold !important;
-        }
-        div[data-testid="stMetricLabel"] {
-            color: #94a3b8 !important;
-        }
-        
-        /* 7. Navigasi Menu Sidebar & Radio Buttons */
-        div[data-testid="stSidebarUserContent"] label {
-            color: #cbd5e1 !important;
-        }
-        
-        /* 8. Kepala Tabel / Dataframe Headers (Hijau Gelap Islami) */
-        th {
-            background-color: #11221c !important;
-            color: #10b981 !important;
-        }
-        
-        /* 9. Desain Tab Menu yang Aktif */
-        button[data-baseweb="tab"] {
-            color: #94a3b8 !important;
-        }
-        button[aria-selected="true"] {
-            color: #10b981 !important;
-            border-bottom-color: #10b981 !important;
-            font-weight: bold !important;
-        }
-        
-        /* 10. Desain Kotak Notifikasi Berhasil (Success Alert) */
-        div[data-testid="stNotification"] {
-            background-color: #0d1f19 !important;
-            border-left: 5px solid #10b981 !important;
-        }
-        
-        /* Tulisan Tebal Highlight Otomatis Kuning */
-        span[data-testid="stMarkdownContainer"] strong {
-            color: #eab308 !important;
-        }
+        [data-testid="stAppViewContainer"] { background-color: #091310 !important; }
+        [data-testid="stSidebar"] { background-color: #050a08 !important; border-right: 1px solid #12241f; }
+        html, body, [class*="css"] { color: #f1f5f9 !important; }
+        button[kind="primary"] { background-color: #10b981 !important; color: white !important; border: 1px solid #059669 !important; border-radius: 8px !important; font-weight: bold !important; transition: all 0.3s ease !important; min-height: 60px !important; }
+        button[kind="primary"]:hover { background-color: #eab308 !important; color: #050a08 !important; border: 1px solid #ca8a04 !important; box-shadow: 0px 0px 10px rgba(234, 179, 8, 0.5) !important; }
+        button[kind="secondary"] { background-color: #11221c !important; color: #10b981 !important; border: 1px solid #1b382e !important; border-radius: 8px !important; min-height: 60px !important; }
+        button[kind="secondary"]:hover { background-color: #1b382e !important; color: #eab308 !important; border: 1px solid #eab308 !important; }
+        div[data-baseweb="input"], div[data-baseweb="select"], .stSelectbox div { background-color: #0d1f19 !important; border: 1px solid #1b382e !important; color: white !important; }
+        div[data-baseweb="input"]:focus-within, div[data-baseweb="select"]:focus-within { border-color: #10b981 !important; }
+        div[data-testid="stMetricValue"] { color: #eab308 !important; font-weight: bold !important; }
+        div[data-testid="stMetricLabel"] { color: #94a3b8 !important; }
+        div[data-testid="stSidebarUserContent"] label { color: #cbd5e1 !important; }
+        th { background-color: #11221c !important; color: #10b981 !important; }
+        button[data-baseweb="tab"] { color: #94a3b8 !important; }
+        button[aria-selected="true"] { color: #10b981 !important; border-bottom-color: #10b981 !important; font-weight: bold !important; }
+        div[data-testid="stNotification"] { background-color: #0d1f19 !important; border-left: 5px solid #10b981 !important; }
+        span[data-testid="stMarkdownContainer"] strong { color: #eab308 !important; }
     </style>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. KONEKSI DATABASE (Di-cache agar cepat)
+# 2. KONEKSI DATABASE & POOLING AMAN UNTUK CLOUD
 # ---------------------------------------------------------
-@st.cache_resource(ttl=60)
+@st.cache_resource
 def init_connection():
     return mysql.connector.connect(
         host=st.secrets["mysql"]["host"],
-        port=st.secrets["mysql"]["port"],
+        port=int(st.secrets["mysql"]["port"]),
         user=st.secrets["mysql"]["username"],
         password=st.secrets["mysql"]["password"],
         database=st.secrets["mysql"]["database"],
-        ssl_disabled=False
+        autocommit=True
     )
 
+def get_db_cursor():
+    """Fungsi helper agar koneksi ke database TiDB tidak terputus dan aman untuk multi-query"""
+    try:
+        conn = init_connection()
+        if not conn.is_connected():
+            conn.reconnect(attempts=3, delay=2)
+        return conn, conn.cursor(dictionary=True)
+    except Exception as e:
+        st.error(f"Gagal terhubung ke Database TiDB: {e}")
+        st.stop()
 
-try:
-    conn = init_connection()
-    conn.ping(reconnect=True, attempts=3, delay=2)
-    cursor = conn.cursor(dictionary=True)
-except Exception as e:
-    st.error(f"Database Error: {e}")
-    st.stop()
 # ---------------------------------------------------------
 # 3. MANAJEMEN SESSION STATE & LOGGING SYSTEM
 # ---------------------------------------------------------
-if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = False
-if 'username' not in st.session_state:
-    st.session_state['username'] = None
-if 'role' not in st.session_state:
-    st.session_state['role'] = None
-if 'menu_aktif' not in st.session_state:
-    st.session_state['menu_aktif'] = "🏠 Dashboard"
-if 'menu_pilihan_key' not in st.session_state:
-    st.session_state['menu_pilihan_key'] = "🏠 Dashboard"
-
-if 'login_attempts' not in st.session_state:
-    st.session_state['login_attempts'] = 0
-if 'lockout_until' not in st.session_state:
-    st.session_state['lockout_until'] = 0
+if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
+if 'username' not in st.session_state: st.session_state['username'] = None
+if 'role' not in st.session_state: st.session_state['role'] = None
+if 'menu_aktif' not in st.session_state: st.session_state['menu_aktif'] = "🏠 Dashboard"
+if 'menu_pilihan_key' not in st.session_state: st.session_state['menu_pilihan_key'] = "🏠 Dashboard"
+if 'login_attempts' not in st.session_state: st.session_state['login_attempts'] = 0
+if 'lockout_until' not in st.session_state: st.session_state['lockout_until'] = 0
 
 def catat_log(aksi):
     role_saat_ini = st.session_state['role'] if st.session_state['logged_in'] else 'anggota'
     waktu_sekarang = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     try:
+        conn, cursor = get_db_cursor()
         query_log = "INSERT INTO log_aktivitas (waktu, role, aksi) VALUES (%s, %s, %s)"
         cursor.execute(query_log, (waktu_sekarang, role_saat_ini, aksi))
         conn.commit()
-    except Exception as e:
+        cursor.close()
+    except Exception:
         pass 
 
 def proses_logout():
@@ -187,7 +108,6 @@ def dialog_konfirmasi_logout():
 def halaman_login():
     st.markdown("<h2 style='text-align: center; color: #10b981;'>Portal Login Admin/Pembina</h2>", unsafe_allow_html=True)
     st.divider()
-    
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
@@ -201,19 +121,20 @@ def halaman_login():
                 if time.time() < st.session_state['lockout_until']:
                     sisa_waktu = int(st.session_state['lockout_until'] - time.time())
                     st.error(f"🛑 Akses ditolak! Terlalu banyak percobaan gagal. Silakan coba lagi dalam {sisa_waktu} detik.")
-                    catat_log(f"Mencoba login saat masa penalti")
+                    catat_log("Mencoba login saat masa penalti")
                 else:
                     if not input_user or not input_pass:
                         st.warning("Username dan Password tidak boleh kosong!")
                     else:
+                        conn, cursor = get_db_cursor()
                         query = "SELECT * FROM user WHERE username = %s AND password = %s"
                         cursor.execute(query, (input_user, input_pass))
                         user_data = cursor.fetchone()
+                        cursor.close()
                         
                         if user_data:
                             st.session_state['login_attempts'] = 0
                             st.session_state['lockout_until'] = 0
-                            
                             st.session_state['logged_in'] = True
                             st.session_state['username'] = user_data['username']
                             st.session_state['role'] = user_data['role']
@@ -230,20 +151,32 @@ def halaman_login():
                                 st.session_state['lockout_until'] = time.time() + 30 
                                 st.error("⚠️ Sistem terkunci sementara dari indikasi Brute Force! Tunggu 30 detik.")
                             else:
-                                sisa_kesempatan = 3 - st.session_state['login_attempts']
-                                st.error(f"Username atau Password salah! (Sisa kesempatan: {sisa_kesempatan})")
+                                st.error(f"Username atau Password salah! (Sisa kesempatan: {3 - st.session_state['login_attempts']})")
 
 # ---------------------------------------------------------
-# 5. FUNGSI PENGAMBILAN DATA STATISTIK
+# 5. FUNGSI PENGAMBILAN DATA STATISTIK AMAN DARI NULL
 # ---------------------------------------------------------
 def get_statistik():
-    cursor.execute("SELECT COUNT(kd_siswa) AS total FROM siswa")
-    total_siswa = cursor.fetchone()['total']
-    cursor.execute("SELECT COUNT(id_divisi) AS total FROM divisi")
-    total_divisi = cursor.fetchone()['total']
-    cursor.execute("SELECT COUNT(id_kriteria) AS total FROM kriteria")
-    total_kriteria = cursor.fetchone()['total']
-    return total_siswa, total_divisi, total_kriteria
+    try:
+        conn, cursor = get_db_cursor()
+        
+        cursor.execute("SELECT COUNT(kd_siswa) AS total FROM siswa")
+        res_siswa = cursor.fetchone()
+        total_siswa = res_siswa["total"] if res_siswa else 0
+        
+        cursor.execute("SELECT COUNT(id_divisi) AS total FROM divisi")
+        res_divisi = cursor.fetchone()
+        total_divisi = res_divisi["total"] if res_divisi else 0
+        
+        cursor.execute("SELECT COUNT(id_kriteria) AS total FROM kriteria")
+        res_kriteria = cursor.fetchone()
+        total_kriteria = res_kriteria["total"] if res_kriteria else 0
+        
+        cursor.close()
+        return total_siswa, total_divisi, total_kriteria
+    except Exception as e:
+        st.error(f"Gagal memuat statistik: {e}")
+        return 0, 0, 0
 
 # ---------------------------------------------------------
 # 6. HALAMAN DASHBOARD
@@ -254,10 +187,8 @@ def halaman_dashboard():
     if st.session_state['logged_in']:
         role_user = st.session_state['role'].lower()
         nama_user = st.session_state['username']
-        if role_user == 'pembina':
-            st.success(f"Selamat datang Pembina Rohis SMP Negeri 87 Jakarta, Bapak/Ibu {nama_user}!")
-        elif role_user == 'pengurus':
-            st.info(f"Selamat datang Pengurus Rohis SMP Negeri 87 Jakarta, Kak {nama_user}!")
+        if role_user == 'pembina': st.success(f"Selamat datang Pembina Rohis SMP Negeri 87 Jakarta, Bapak/Ibu {nama_user}!")
+        elif role_user == 'pengurus': st.info(f"Selamat datang Pengurus Rohis SMP Negeri 87 Jakarta, Kak {nama_user}!")
     else:
         st.info("Selamat datang di Sistem Pendukung Keputusan Divisi Rohis SMPN 87 Jakarta.")
         st.write("Sistem ini digunakan untuk memetakan bakat dan minat siswa ke divisi yang tepat.")
@@ -267,26 +198,26 @@ def halaman_dashboard():
     col1, col2, col3 = st.columns(3)
     total_siswa, total_divisi, total_kriteria = get_statistik()
     
-    with col1:
-        st.metric(label="Total Anggota Terdaftar", value=f"{total_siswa} Siswa")
-    with col2:
-        st.metric(label="Total Divisi Tersedia", value=f"{total_divisi} Divisi")
-    with col3:
-        st.metric(label="Kriteria Penilaian", value=f"{total_kriteria} Kriteria")
+    with col1: st.metric(label="Total Anggota Terdaftar", value=f"{total_siswa} Siswa")
+    with col2: st.metric(label="Total Divisi Tersedia", value=f"{total_divisi} Divisi")
+    with col3: st.metric(label="Kriteria Penilaian", value=f"{total_kriteria} Kriteria")
 
     st.divider()
     st.subheader("📈 Analisis & Statistik Penempatan Divisi")
     
+    conn, cursor = get_db_cursor()
+    
+    # GROUP BY Fix untuk SQL Mode ONLY_FULL_GROUP_BY
     cursor.execute("""
-        SELECT d.nama_divisi, COUNT(h.id_ranking) as jumlah 
+        SELECT d.id_divisi, d.nama_divisi, COUNT(h.id_ranking) as jumlah 
         FROM divisi d 
         LEFT JOIN hasil_ranking h ON d.id_divisi = h.id_divisi 
-        GROUP BY d.id_divisi
+        GROUP BY d.id_divisi, d.nama_divisi
     """)
     data_sebaran = cursor.fetchall()
     
     cursor.execute("""
-        SELECT s.nama_siswa, GROUP_CONCAT(d.nama_divisi SEPARATOR ' / ') as nama_divisi, h.skor_akhir
+        SELECT s.kd_siswa, s.nama_siswa, GROUP_CONCAT(d.nama_divisi SEPARATOR ' / ') as nama_divisi, h.skor_akhir
         FROM hasil_ranking h
         JOIN siswa s ON h.kd_siswa = s.kd_siswa
         JOIN divisi d ON h.id_divisi = d.id_divisi
@@ -295,6 +226,7 @@ def halaman_dashboard():
         LIMIT 1
     """)
     top_siswa = cursor.fetchone()
+    cursor.close()
 
     col_stat1, col_stat2 = st.columns([2, 1])
     
@@ -330,8 +262,10 @@ def halaman_data_siswa():
     list_pilihan_kelas = ["7.1", "7.2", "7.3", "7.4", "7.5", "7.6", "8.1", "8.2", "8.3", "8.4", "8.5", "8.6"]
 
     st.subheader("📋 Daftar Anggota Terdaftar")
+    conn, cursor = get_db_cursor()
     cursor.execute("SELECT kd_siswa, nama_siswa, kelas FROM siswa ORDER BY kd_siswa DESC")
     data_siswa = cursor.fetchall()
+    cursor.close()
     
     if data_siswa:
         df_siswa = pd.DataFrame(data_siswa)
@@ -355,9 +289,11 @@ def halaman_data_siswa():
                     st.error("Validasi Gagal: Nama siswa tidak boleh kosong!")
                 else:
                     try:
+                        conn, cursor = get_db_cursor()
                         query_insert = "INSERT INTO siswa (nama_siswa, kelas) VALUES (%s, %s)"
                         cursor.execute(query_insert, (input_nama, input_kelas))
                         conn.commit() 
+                        cursor.close()
                         catat_log(f"Menambahkan data siswa baru: {input_nama} ({input_kelas})")
                         st.success(f"Data {input_nama} berhasil ditambahkan!")
                         time.sleep(1)
@@ -372,29 +308,32 @@ def halaman_data_siswa():
             pilih_edit = st.selectbox("Pilih Anggota yang akan diedit:", opsi_edit)
             kd_edit = pilih_edit.split(" - ")[0]
             
+            conn, cursor = get_db_cursor()
             cursor.execute("SELECT * FROM siswa WHERE kd_siswa = %s", (kd_edit,))
             data_lama = cursor.fetchone()
+            cursor.close()
             
-            with st.form("form_edit_siswa"):
-                edit_nama = st.text_input("Nama Lengkap", value=data_lama['nama_siswa'])
-                try:
-                    idx_kelas = list_pilihan_kelas.index(data_lama['kelas'])
-                except ValueError:
-                    idx_kelas = 0
-                edit_kelas = st.selectbox("Kelas", list_pilihan_kelas, index=idx_kelas)
-                btn_update = st.form_submit_button("Update Data", type="primary")
-                
-                if btn_update:
-                    if edit_nama.strip() == "":
-                        st.error("Validasi Gagal: Nama siswa tidak boleh kosong!")
-                    else:
-                        query_update = "UPDATE siswa SET nama_siswa = %s, kelas = %s WHERE kd_siswa = %s"
-                        cursor.execute(query_update, (edit_nama, edit_kelas, kd_edit))
-                        conn.commit()
-                        catat_log(f"Mengubah data siswa ID {kd_edit} menjadi {edit_nama} ({edit_kelas})")
-                        st.success("Data berhasil diperbarui!")
-                        time.sleep(1)
-                        st.rerun()
+            if data_lama:
+                with st.form("form_edit_siswa"):
+                    edit_nama = st.text_input("Nama Lengkap", value=data_lama['nama_siswa'])
+                    try: idx_kelas = list_pilihan_kelas.index(data_lama['kelas'])
+                    except ValueError: idx_kelas = 0
+                    edit_kelas = st.selectbox("Kelas", list_pilihan_kelas, index=idx_kelas)
+                    btn_update = st.form_submit_button("Update Data", type="primary")
+                    
+                    if btn_update:
+                        if edit_nama.strip() == "":
+                            st.error("Validasi Gagal: Nama siswa tidak boleh kosong!")
+                        else:
+                            conn, cursor = get_db_cursor()
+                            query_update = "UPDATE siswa SET nama_siswa = %s, kelas = %s WHERE kd_siswa = %s"
+                            cursor.execute(query_update, (edit_nama, edit_kelas, kd_edit))
+                            conn.commit()
+                            cursor.close()
+                            catat_log(f"Mengubah data siswa ID {kd_edit} menjadi {edit_nama} ({edit_kelas})")
+                            st.success("Data berhasil diperbarui!")
+                            time.sleep(1)
+                            st.rerun()
         else:
             st.warning("Data kosong. Tidak ada data yang bisa diedit.")
 
@@ -412,9 +351,11 @@ def halaman_data_siswa():
                 btn_hapus = st.form_submit_button("Ya, Hapus Data Ini", type="primary")
                 
                 if btn_hapus:
+                    conn, cursor = get_db_cursor()
                     query_delete = "DELETE FROM siswa WHERE kd_siswa = %s"
                     cursor.execute(query_delete, (kd_hapus,))
                     conn.commit()
+                    cursor.close()
                     catat_log(f"Menghapus data siswa: {nama_dihapus}")
                     st.success("Data berhasil dihapus selamanya!")
                     time.sleep(1)
@@ -431,8 +372,11 @@ def halaman_profil():
     st.divider()
 
     username_sekarang = st.session_state['username']
+    
+    conn, cursor = get_db_cursor()
     cursor.execute("SELECT * FROM user WHERE username = %s", (username_sekarang,))
     user_info = cursor.fetchone()
+    cursor.close()
 
     if not user_info:
         st.error("Gagal memuat data akun dari database.")
@@ -458,15 +402,19 @@ def halaman_profil():
                 elif new_username == username_sekarang:
                     st.warning("Username baru sama dengan username yang Anda gunakan saat ini.")
                 else:
+                    conn, cursor = get_db_cursor()
                     cursor.execute("SELECT * FROM user WHERE username = %s", (new_username,))
                     username_kembar = cursor.fetchone()
+                    
                     if username_kembar:
                         st.error("🛑 Gagal: Username tersebut sudah digunakan oleh akun lain. Silakan cari nama lain!")
+                        cursor.close()
                     else:
                         try:
                             query_update_user = "UPDATE user SET username = %s WHERE username = %s"
                             cursor.execute(query_update_user, (new_username, username_sekarang))
                             conn.commit()
+                            cursor.close()
                             catat_log(f"Mengubah username menjadi: {new_username}")
                             st.session_state['username'] = new_username
                             st.success("Username berhasil diubah") 
@@ -492,9 +440,11 @@ def halaman_profil():
                     st.error("❌ Validasi Gagal: Konfirmasi password baru tidak cocok!")
                 else:
                     try:
+                        conn, cursor = get_db_cursor()
                         query_update_pass = "UPDATE user SET password = %s WHERE username = %s"
                         cursor.execute(query_update_pass, (new_password, username_sekarang))
                         conn.commit()
+                        cursor.close()
                         catat_log("Mengubah kata sandi akun")
                         st.success("🔒 Password berhasil diperbarui secara aman!")
                     except Exception as e:
@@ -508,11 +458,13 @@ def halaman_input_nilai():
     st.write("Modul Core Engine: Menginput nilai tes siswa untuk diproses pada algoritma Profile Matching.")
     st.divider()
 
+    conn, cursor = get_db_cursor()
     cursor.execute("SELECT kd_siswa, nama_siswa FROM siswa ORDER BY nama_siswa ASC")
     data_siswa = cursor.fetchall()
     
     cursor.execute("SELECT id_kriteria, nama_kriteria FROM kriteria")
     data_kriteria = cursor.fetchall()
+    cursor.close()
 
     if not data_siswa or not data_kriteria:
         st.warning("⚠️ Data Master (Siswa atau Kriteria) belum lengkap. Silakan lengkapi di menu Data Anggota.")
@@ -524,11 +476,7 @@ def halaman_input_nilai():
     kd_siswa_terpilih = opsi_siswa[pilih_siswa]
 
     pilihan_skala = [
-        "1 - Sangat Kurang",
-        "2 - Kurang",
-        "3 - Cukup / Standar",
-        "4 - Baik",
-        "5 - Sangat Baik"
+        "1 - Sangat Kurang", "2 - Kurang", "3 - Cukup / Standar", "4 - Baik", "5 - Sangat Baik"
     ]
 
     with st.form("form_input_nilai"):
@@ -548,16 +496,17 @@ def halaman_input_nilai():
         
         if btn_simpan_nilai:
             try:
+                conn, cursor = get_db_cursor()
                 cursor.execute("DELETE FROM nilai_siswa WHERE kd_siswa = %s", (kd_siswa_terpilih,))
                 
                 for id_k, nilai_akt_str in nilai_inputan.items():
                     nilai_angka = int(nilai_akt_str.split(" - ")[0])
-                    
                     cursor.execute(
                         "INSERT INTO nilai_siswa (kd_siswa, id_kriteria, nilai_aktual) VALUES (%s, %s, %s)",
                         (kd_siswa_terpilih, id_k, nilai_angka)
                     )
                 conn.commit()
+                cursor.close()
                 catat_log(f"Menginput/Update nilai tes untuk siswa ID: {kd_siswa_terpilih}")
                 st.success("✅ Nilai aktual siswa berhasil disimpan ke database!")
             except Exception as e:
@@ -592,6 +541,7 @@ def halaman_hasil_spk():
             "Tahfidz (Kesenian)": {"K1": 4, "K2": 4, "K3": 3, "K4": 3, "K5": 4}
         }
 
+        conn, cursor = get_db_cursor()
         cursor.execute("""
             SELECT h.kd_siswa, s.nama_siswa, s.kelas, h.skor_akhir, GROUP_CONCAT(d.nama_divisi SEPARATOR ' / ') as nama_divisi
             FROM hasil_ranking h
@@ -603,6 +553,7 @@ def halaman_hasil_spk():
 
         if not hasil_db:
             st.info("Belum ada data hasil perankingan yang disimpan di database.")
+            cursor.close()
             return
 
         data_mentah = []
@@ -638,7 +589,8 @@ def halaman_hasil_spk():
                 "Skor (Persentase)": persentase,
                 "Rekomendasi Utama": row['nama_divisi']
             })
-
+            
+        cursor.close()
         data_mentah.sort(key=lambda x: (x['Total Nilai (CF)'], x['Skor (Persentase)']), reverse=True)
 
         tab_individu, tab_keseluruhan = st.tabs(["👤 Cek Hasil Individu", "📊 Data Keseluruhan"])
@@ -695,7 +647,6 @@ def halaman_hasil_spk():
 
             data_klasemen = []
             for idx, d in enumerate(data_filtered):
-                # --- UPDATE NAMA KOLOM DI SINI ---
                 data_klasemen.append({
                     "Rank": idx + 1,
                     "Nama Siswa": d['Nama Siswa'],
@@ -712,7 +663,6 @@ def halaman_hasil_spk():
                 with col_header:
                     st.write("### 🏆 Tabel Rekomendasi Keseluruhan")
                     
-                import io
                 buffer = io.BytesIO()
                 with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                     df_klasemen.to_excel(writer, index=False, sheet_name='Klasemen ROHIS')
@@ -730,8 +680,6 @@ def halaman_hasil_spk():
 
                 try:
                     from fpdf import FPDF
-                    import tempfile
-                    import os
 
                     class PDF(FPDF):
                         def header(self):
@@ -745,9 +693,8 @@ def halaman_hasil_spk():
                     pdf = PDF()
                     pdf.add_page()
                     
-                    # --- UPDATE HEADER PDF DI SINI ---
                     headers = ["Rank", "Nama Siswa", "Kelas", "Nilai", "Tk. Kecocokan", "Rekomendasi Divisi"]
-                    col_widths = [12, 45, 12, 15, 23, 83] # Disesuaikan sedikit lebarnya
+                    col_widths = [12, 45, 12, 15, 25, 81] 
                     
                     pdf.set_font("Arial", 'B', 9)
                     for i, header in enumerate(headers):
@@ -760,7 +707,6 @@ def halaman_hasil_spk():
                         pdf.cell(col_widths[1], 8, str(row['Nama Siswa'])[:22], 1, 0, 'L')
                         pdf.cell(col_widths[2], 8, str(row['Kelas']), 1, 0, 'C')
                         
-                        # --- UPDATE REFERENCE VARIABEL DATA DI SINI ---
                         pdf.cell(col_widths[3], 8, str(row['Nilai']), 1, 0, 'C')
                         pdf.cell(col_widths[4], 8, str(row['Tingkat Kecocokan']), 1, 0, 'C')
                         
@@ -786,7 +732,7 @@ def halaman_hasil_spk():
                         )
                 except ImportError:
                     with col_pdf:
-                        st.error("⚠️ Install fpdf (pip install fpdf)")
+                        st.error("⚠️ Install fpdf2 (pip install fpdf2)")
 
                 st.dataframe(df_klasemen, hide_index=True, use_container_width=True)
             else:
@@ -815,6 +761,7 @@ def halaman_hasil_spk():
                 "Takmir Musholla": 7, "CCI (Kesenian)": 8, "Tahfidz (Kesenian)": 9
             }
 
+            conn, cursor = get_db_cursor()
             cursor.execute("SELECT kd_siswa, nama_siswa FROM siswa")
             data_siswa = cursor.fetchall()
 
@@ -832,6 +779,7 @@ def halaman_hasil_spk():
                     ORDER BY id_kriteria ASC
                 ''', (kd_siswa,))
                 data_nilai = cursor.fetchall()
+                cursor.close()
 
                 if len(data_nilai) < 5:
                     st.error("Data nilai siswa belum lengkap (harus dinilai pada 5 kriteria terlebih dahulu).")
@@ -894,6 +842,7 @@ def halaman_hasil_spk():
                             max_skor = df_hasil['Skor Akhir'].max()
                             top_divisi_df = df_hasil[df_hasil['Skor Akhir'] == max_skor]
 
+                            conn, cursor = get_db_cursor()
                             cursor.execute("DELETE FROM hasil_ranking WHERE kd_siswa = %s", (kd_siswa,))
                             
                             saved_divisi = []
@@ -906,6 +855,7 @@ def halaman_hasil_spk():
                                     saved_divisi.append(row['Divisi / Peminatan'])
                                     
                             conn.commit()
+                            cursor.close()
                             
                             nama_div_gabung = " / ".join(saved_divisi)
                             catat_log(f"Menyimpan hasil ranking ({nama_div_gabung}) untuk siswa ID: {kd_siswa}")
