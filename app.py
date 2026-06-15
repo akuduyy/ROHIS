@@ -8,7 +8,7 @@ import tempfile
 import os
 
 # ---------------------------------------------------------
-# 1. KONFIGURASI HALAMAN UTAMA & SUNTIKAN TEMA WARNA
+# 1. KONFIGURASI HALAMAN UTAMA & SUNTIKAN TEMA WARNA (ROHIS THEME)
 # ---------------------------------------------------------
 st.set_page_config(page_title="ROHIS-MATCH", page_icon="🕌", layout="wide")
 
@@ -35,7 +35,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. KONEKSI DATABASE & POOLING AMAN UNTUK CLOUD
+# 2. KONEKSI DATABASE AMAN (Anti-Lost Connection)
 # ---------------------------------------------------------
 @st.cache_resource
 def init_connection():
@@ -49,14 +49,13 @@ def init_connection():
     )
 
 def get_db_cursor():
+    conn = init_connection()
     try:
-        conn = init_connection()
-        if not conn.is_connected():
-            conn.reconnect(attempts=3, delay=2)
-        return conn, conn.cursor(dictionary=True)
-    except Exception as e:
-        st.error(f"Gagal terhubung ke Database TiDB: {e}")
+        conn.ping(reconnect=True, attempts=3, delay=2)
+    except:
+        st.error("Koneksi database terputus. Silakan muat ulang halaman.")
         st.stop()
+    return conn, conn.cursor(dictionary=True)
 
 # ---------------------------------------------------------
 # 3. MANAJEMEN SESSION STATE & LOGGING SYSTEM
@@ -153,28 +152,20 @@ def halaman_login():
                                 st.error(f"Username atau Password salah! (Sisa kesempatan: {3 - st.session_state['login_attempts']})")
 
 # ---------------------------------------------------------
-# 5. FUNGSI PENGAMBILAN DATA STATISTIK AMAN DARI NULL
+# 5. FUNGSI PENGAMBILAN DATA STATISTIK
 # ---------------------------------------------------------
 def get_statistik():
     try:
         conn, cursor = get_db_cursor()
-        
         cursor.execute("SELECT COUNT(kd_siswa) AS total FROM siswa")
-        res_siswa = cursor.fetchone()
-        total_siswa = res_siswa["total"] if res_siswa else 0
-        
+        total_siswa = cursor.fetchone()['total']
         cursor.execute("SELECT COUNT(id_divisi) AS total FROM divisi")
-        res_divisi = cursor.fetchone()
-        total_divisi = res_divisi["total"] if res_divisi else 0
-        
+        total_divisi = cursor.fetchone()['total']
         cursor.execute("SELECT COUNT(id_kriteria) AS total FROM kriteria")
-        res_kriteria = cursor.fetchone()
-        total_kriteria = res_kriteria["total"] if res_kriteria else 0
-        
+        total_kriteria = cursor.fetchone()['total']
         cursor.close()
         return total_siswa, total_divisi, total_kriteria
-    except Exception as e:
-        st.error(f"Gagal memuat statistik: {e}")
+    except:
         return 0, 0, 0
 
 # ---------------------------------------------------------
@@ -186,8 +177,10 @@ def halaman_dashboard():
     if st.session_state['logged_in']:
         role_user = st.session_state['role'].lower()
         nama_user = st.session_state['username']
-        if role_user == 'pembina': st.success(f"Selamat datang Pembina Rohis SMP Negeri 87 Jakarta, Bapak/Ibu {nama_user}!")
-        elif role_user == 'pengurus': st.info(f"Selamat datang Pengurus Rohis SMP Negeri 87 Jakarta, Kak {nama_user}!")
+        if role_user == 'pembina':
+            st.success(f"Selamat datang Pembina Rohis SMP Negeri 87 Jakarta, Bapak/Ibu {nama_user}!")
+        elif role_user == 'pengurus':
+            st.info(f"Selamat datang Pengurus Rohis SMP Negeri 87 Jakarta, Kak {nama_user}!")
     else:
         st.info("Selamat datang di Sistem Pendukung Keputusan Divisi Rohis SMPN 87 Jakarta.")
         st.write("Sistem ini digunakan untuk memetakan bakat dan minat siswa ke divisi yang tepat.")
@@ -197,27 +190,37 @@ def halaman_dashboard():
     col1, col2, col3 = st.columns(3)
     total_siswa, total_divisi, total_kriteria = get_statistik()
     
-    with col1: st.metric(label="Total Anggota Terdaftar", value=f"{total_siswa} Siswa")
-    with col2: st.metric(label="Total Divisi Tersedia", value=f"{total_divisi} Divisi")
-    with col3: st.metric(label="Kriteria Penilaian", value=f"{total_kriteria} Kriteria")
+    with col1:
+        st.metric(label="Total Anggota Terdaftar", value=f"{total_siswa} Siswa")
+    with col2:
+        st.metric(label="Total Divisi Tersedia", value=f"{total_divisi} Divisi")
+    with col3:
+        st.metric(label="Kriteria Penilaian", value=f"{total_kriteria} Kriteria")
 
     st.divider()
     st.subheader("📈 Analisis & Statistik Penempatan Divisi")
     
     conn, cursor = get_db_cursor()
     
-    # PERBAIKAN 1: GROUP BY Fix untuk SQL Mode ONLY_FULL_GROUP_BY (Grafik Sebaran)
+    # -----------------------------------------------------------------
+    # PERBAIKAN: FORMAT GROUP BY SESUAI PERMINTAAN EXACT ANDA
+    # -----------------------------------------------------------------
     cursor.execute("""
-        SELECT d.id_divisi, d.nama_divisi, COUNT(h.id_ranking) as jumlah 
-        FROM divisi d 
-        LEFT JOIN hasil_ranking h ON d.id_divisi = h.id_divisi 
+        SELECT d.id_divisi,
+               d.nama_divisi,
+               COUNT(h.id_ranking) as jumlah
+        FROM divisi d
+        LEFT JOIN hasil_ranking h
+               ON d.id_divisi = h.id_divisi
         GROUP BY d.id_divisi, d.nama_divisi
     """)
     data_sebaran = cursor.fetchall()
     
-    # PERBAIKAN 2: GROUP BY Fix untuk SQL Mode ONLY_FULL_GROUP_BY (Top Siswa)
     cursor.execute("""
-        SELECT s.kd_siswa, s.nama_siswa, GROUP_CONCAT(d.nama_divisi SEPARATOR ' / ') as nama_divisi, h.skor_akhir
+        SELECT s.kd_siswa, 
+               s.nama_siswa, 
+               GROUP_CONCAT(d.nama_divisi SEPARATOR ' / ') as nama_divisi, 
+               h.skor_akhir
         FROM hasil_ranking h
         JOIN siswa s ON h.kd_siswa = s.kd_siswa
         JOIN divisi d ON h.id_divisi = d.id_divisi
@@ -313,27 +316,28 @@ def halaman_data_siswa():
             data_lama = cursor.fetchone()
             cursor.close()
             
-            if data_lama:
-                with st.form("form_edit_siswa"):
-                    edit_nama = st.text_input("Nama Lengkap", value=data_lama['nama_siswa'])
-                    try: idx_kelas = list_pilihan_kelas.index(data_lama['kelas'])
-                    except ValueError: idx_kelas = 0
-                    edit_kelas = st.selectbox("Kelas", list_pilihan_kelas, index=idx_kelas)
-                    btn_update = st.form_submit_button("Update Data", type="primary")
-                    
-                    if btn_update:
-                        if edit_nama.strip() == "":
-                            st.error("Validasi Gagal: Nama siswa tidak boleh kosong!")
-                        else:
-                            conn, cursor = get_db_cursor()
-                            query_update = "UPDATE siswa SET nama_siswa = %s, kelas = %s WHERE kd_siswa = %s"
-                            cursor.execute(query_update, (edit_nama, edit_kelas, kd_edit))
-                            conn.commit()
-                            cursor.close()
-                            catat_log(f"Mengubah data siswa ID {kd_edit} menjadi {edit_nama} ({edit_kelas})")
-                            st.success("Data berhasil diperbarui!")
-                            time.sleep(1)
-                            st.rerun()
+            with st.form("form_edit_siswa"):
+                edit_nama = st.text_input("Nama Lengkap", value=data_lama['nama_siswa'])
+                try:
+                    idx_kelas = list_pilihan_kelas.index(data_lama['kelas'])
+                except ValueError:
+                    idx_kelas = 0
+                edit_kelas = st.selectbox("Kelas", list_pilihan_kelas, index=idx_kelas)
+                btn_update = st.form_submit_button("Update Data", type="primary")
+                
+                if btn_update:
+                    if edit_nama.strip() == "":
+                        st.error("Validasi Gagal: Nama siswa tidak boleh kosong!")
+                    else:
+                        conn, cursor = get_db_cursor()
+                        query_update = "UPDATE siswa SET nama_siswa = %s, kelas = %s WHERE kd_siswa = %s"
+                        cursor.execute(query_update, (edit_nama, edit_kelas, kd_edit))
+                        conn.commit()
+                        cursor.close()
+                        catat_log(f"Mengubah data siswa ID {kd_edit} menjadi {edit_nama} ({edit_kelas})")
+                        st.success("Data berhasil diperbarui!")
+                        time.sleep(1)
+                        st.rerun()
         else:
             st.warning("Data kosong. Tidak ada data yang bisa diedit.")
 
@@ -372,7 +376,6 @@ def halaman_profil():
     st.divider()
 
     username_sekarang = st.session_state['username']
-    
     conn, cursor = get_db_cursor()
     cursor.execute("SELECT * FROM user WHERE username = %s", (username_sekarang,))
     user_info = cursor.fetchone()
@@ -405,7 +408,6 @@ def halaman_profil():
                     conn, cursor = get_db_cursor()
                     cursor.execute("SELECT * FROM user WHERE username = %s", (new_username,))
                     username_kembar = cursor.fetchone()
-                    
                     if username_kembar:
                         st.error("🛑 Gagal: Username tersebut sudah digunakan oleh akun lain. Silakan cari nama lain!")
                         cursor.close()
@@ -476,7 +478,11 @@ def halaman_input_nilai():
     kd_siswa_terpilih = opsi_siswa[pilih_siswa]
 
     pilihan_skala = [
-        "1 - Sangat Kurang", "2 - Kurang", "3 - Cukup / Standar", "4 - Baik", "5 - Sangat Baik"
+        "1 - Sangat Kurang",
+        "2 - Kurang",
+        "3 - Cukup / Standar",
+        "4 - Baik",
+        "5 - Sangat Baik"
     ]
 
     with st.form("form_input_nilai"):
@@ -501,6 +507,7 @@ def halaman_input_nilai():
                 
                 for id_k, nilai_akt_str in nilai_inputan.items():
                     nilai_angka = int(nilai_akt_str.split(" - ")[0])
+                    
                     cursor.execute(
                         "INSERT INTO nilai_siswa (kd_siswa, id_kriteria, nilai_aktual) VALUES (%s, %s, %s)",
                         (kd_siswa_terpilih, id_k, nilai_angka)
@@ -542,8 +549,6 @@ def halaman_hasil_spk():
         }
 
         conn, cursor = get_db_cursor()
-        
-        # PERBAIKAN 3: GROUP BY Fix untuk Tabel Klasemen
         cursor.execute("""
             SELECT h.kd_siswa, s.nama_siswa, s.kelas, h.skor_akhir, GROUP_CONCAT(d.nama_divisi SEPARATOR ' / ') as nama_divisi
             FROM hasil_ranking h
@@ -665,6 +670,7 @@ def halaman_hasil_spk():
                 with col_header:
                     st.write("### 🏆 Tabel Rekomendasi Keseluruhan")
                     
+                import io
                 buffer = io.BytesIO()
                 with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                     df_klasemen.to_excel(writer, index=False, sheet_name='Klasemen ROHIS')
@@ -682,6 +688,8 @@ def halaman_hasil_spk():
 
                 try:
                     from fpdf import FPDF
+                    import tempfile
+                    import os
 
                     class PDF(FPDF):
                         def header(self):
@@ -696,7 +704,7 @@ def halaman_hasil_spk():
                     pdf.add_page()
                     
                     headers = ["Rank", "Nama Siswa", "Kelas", "Nilai", "Tk. Kecocokan", "Rekomendasi Divisi"]
-                    col_widths = [12, 45, 12, 15, 25, 81] 
+                    col_widths = [12, 45, 12, 15, 23, 83] 
                     
                     pdf.set_font("Arial", 'B', 9)
                     for i, header in enumerate(headers):
