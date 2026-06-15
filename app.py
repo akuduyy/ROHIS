@@ -49,7 +49,6 @@ def init_connection():
     )
 
 def get_db_cursor():
-    """Fungsi helper agar koneksi ke database TiDB tidak terputus dan aman untuk multi-query"""
     try:
         conn = init_connection()
         if not conn.is_connected():
@@ -207,7 +206,7 @@ def halaman_dashboard():
     
     conn, cursor = get_db_cursor()
     
-    # GROUP BY Fix untuk SQL Mode ONLY_FULL_GROUP_BY
+    # PERBAIKAN 1: GROUP BY Fix untuk SQL Mode ONLY_FULL_GROUP_BY (Grafik Sebaran)
     cursor.execute("""
         SELECT d.id_divisi, d.nama_divisi, COUNT(h.id_ranking) as jumlah 
         FROM divisi d 
@@ -216,6 +215,7 @@ def halaman_dashboard():
     """)
     data_sebaran = cursor.fetchall()
     
+    # PERBAIKAN 2: GROUP BY Fix untuk SQL Mode ONLY_FULL_GROUP_BY (Top Siswa)
     cursor.execute("""
         SELECT s.kd_siswa, s.nama_siswa, GROUP_CONCAT(d.nama_divisi SEPARATOR ' / ') as nama_divisi, h.skor_akhir
         FROM hasil_ranking h
@@ -542,6 +542,8 @@ def halaman_hasil_spk():
         }
 
         conn, cursor = get_db_cursor()
+        
+        # PERBAIKAN 3: GROUP BY Fix untuk Tabel Klasemen
         cursor.execute("""
             SELECT h.kd_siswa, s.nama_siswa, s.kelas, h.skor_akhir, GROUP_CONCAT(d.nama_divisi SEPARATOR ' / ') as nama_divisi
             FROM hasil_ranking h
@@ -767,6 +769,7 @@ def halaman_hasil_spk():
 
             if not data_siswa:
                 st.warning("Belum ada data siswa di database.")
+                cursor.close()
             else:
                 opsi_siswa = [f"{s['kd_siswa']} - {s['nama_siswa']}" for s in data_siswa]
                 pilih_siswa = st.selectbox("Pilih Siswa untuk Dihitung Gap-nya:", opsi_siswa)
