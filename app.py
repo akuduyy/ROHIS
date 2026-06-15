@@ -127,12 +127,11 @@ def init_connection():
 
 try:
     conn = init_connection()
-    st.success("Database connected")
+    conn.ping(reconnect=True, attempts=3, delay=2)
+    cursor = conn.cursor(dictionary=True)
 except Exception as e:
-    st.error(str(e))
+    st.error(f"Database Error: {e}")
     st.stop()
-
-cursor = conn.cursor(dictionary=True)
 # ---------------------------------------------------------
 # 3. MANAJEMEN SESSION STATE & LOGGING SYSTEM
 # ---------------------------------------------------------
