@@ -116,10 +116,12 @@ st.markdown("""
 @st.cache_resource
 def init_connection():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="", # Sesuaikan jika XAMPP kamu pakai password
-        database="db_rohis_match"
+        host=st.secrets["mysql"]["host"],
+        user=st.secrets["mysql"]["username"],
+        password=st.secrets["mysql"]["password"],
+        database=st.secrets["mysql"]["database"],
+        port=st.secrets["mysql"]["port"]
+    )
     )
 
 conn = init_connection()
