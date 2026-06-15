@@ -94,10 +94,10 @@ def dialog_konfirmasi_logout():
     st.write("Apakah Anda yakin ingin keluar dari sistem?")
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("Ya, Keluar", type="primary", use_container_width=True):
+        if st.button("Ya, Keluar", type="primary", width="stretch"):
             proses_logout()
     with col2:
-        if st.button("Batal", use_container_width=True):
+        if st.button("Batal", width="stretch"):
             st.rerun()
 
 # ---------------------------------------------------------
@@ -113,7 +113,7 @@ def halaman_login():
             st.subheader("👤 Silakan Login")
             input_user = st.text_input("Username")
             input_pass = st.text_input("Password", type="password")
-            btn_login = st.form_submit_button("Login", type="primary", use_container_width=True)
+            btn_login = st.form_submit_button("Login", type="primary", width="stretch")
             
             if btn_login:
                 if time.time() < st.session_state['lockout_until']:
