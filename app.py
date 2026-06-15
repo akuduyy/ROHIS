@@ -37,25 +37,34 @@ st.markdown("""
 # ---------------------------------------------------------
 # 2. KONEKSI DATABASE AMAN (Anti-Lost Connection)
 # ---------------------------------------------------------
-@st.cache_resource
-def init_connection():
-    return mysql.connector.connect(
-        host=st.secrets["mysql"]["host"],
-        port=int(st.secrets["mysql"]["port"]),
-        user=st.secrets["mysql"]["username"],
-        password=st.secrets["mysql"]["password"],
-        database=st.secrets["mysql"]["database"],
-        autocommit=True,
-        use_pure=True
-    )
-
 def get_db_cursor():
-    conn = init_connection()
+    if 'db_conn' not in st.session_state or st.session_state['db_conn'] is None:
+        st.session_state['db_conn'] = mysql.connector.connect(
+            host=st.secrets["mysql"]["host"],
+            port=int(st.secrets["mysql"]["port"]),
+            user=st.secrets["mysql"]["username"],
+            password=st.secrets["mysql"]["password"],
+            database=st.secrets["mysql"]["database"],
+            autocommit=True,
+            use_pure=True
+        )
+    
+    conn = st.session_state['db_conn']
+    
     try:
         conn.ping(reconnect=True, attempts=3, delay=2)
-    except:
-        st.error("Koneksi database terputus. Silakan muat ulang halaman.")
-        st.stop()
+    except Exception:
+        st.session_state['db_conn'] = mysql.connector.connect(
+            host=st.secrets["mysql"]["host"],
+            port=int(st.secrets["mysql"]["port"]),
+            user=st.secrets["mysql"]["username"],
+            password=st.secrets["mysql"]["password"],
+            database=st.secrets["mysql"]["database"],
+            autocommit=True,
+            use_pure=True
+        )
+        conn = st.session_state['db_conn']
+        
     return conn, conn.cursor(dictionary=True)
 
 # ---------------------------------------------------------
