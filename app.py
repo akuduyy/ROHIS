@@ -123,7 +123,9 @@ def init_connection():
         port=st.secrets["mysql"]["port"]
     )
 
+
 conn = init_connection()
+conn.ping(reconnect=True, attempts=3, delay=2)
 cursor = conn.connector.cursor(dictionary=True) if hasattr(conn, 'connector') else conn.cursor(dictionary=True)
 
 # ---------------------------------------------------------
