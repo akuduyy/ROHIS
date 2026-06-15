@@ -113,7 +113,7 @@ st.markdown("""
 # ---------------------------------------------------------
 # 2. KONEKSI DATABASE (Di-cache agar cepat)
 # ---------------------------------------------------------
-@st.cache_resource
+@st.cache_resource(ttl=60)
 def init_connection():
     return mysql.connector.connect(
         host=st.secrets["mysql"]["host"],
@@ -126,7 +126,6 @@ def init_connection():
 
 
 conn = init_connection()
-conn.ping(reconnect=True, attempts=3, delay=2)
 cursor = conn.connector.cursor(dictionary=True) if hasattr(conn, 'connector') else conn.cursor(dictionary=True)
 
 # ---------------------------------------------------------
